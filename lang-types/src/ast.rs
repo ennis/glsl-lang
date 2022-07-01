@@ -26,15 +26,38 @@ use rserde::{Deserialize, Serialize};
 pub use lang_util::{
     node::{Node, NodeDisplay},
     position::NodeSpan,
+    NodeContentDisplay,
     NodeContent, SmolStr, TextRange, TextSize,
 };
 
+macro_rules! impl_node_content {
+    (
+        $(#[$m:meta])* $v:vis type $t:ident = Node<$tdata:ident>;
+    ) => {
+        impl NodeContent for $tdata {}
+
+        $(#[$m])* $v type $t = Node<$tdata>;
+
+        impl From<Node<$tdata>> for $tdata {
+            fn from(node: Node<$tdata>) -> Self {
+                node.content
+            }
+        }
+    };
+}
+
 /// A generic identifier.
-#[derive(Clone, Debug, PartialEq, PartialOrd, Hash, NodeContent)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Hash, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 #[lang_util(display(leaf))]
 pub struct IdentifierData(#[lang_util(display(extra))] pub SmolStr);
+
+impl_node_content! {
+    /// Type alias for `Node<IdentifierData>`.
+    pub type Identifier = Node<IdentifierData>;
+}
+
 
 impl IdentifierData {
     /// Parses this identifier as a glsl-lang-quote Rust identifier
@@ -73,11 +96,16 @@ impl fmt::Display for IdentifierData {
 }
 
 /// Any type name.
-#[derive(Clone, Debug, PartialEq, PartialOrd, Hash, NodeContent)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Hash, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 #[lang_util(display(leaf))]
 pub struct TypeNameData(pub SmolStr);
+
+impl_node_content! {
+    /// Type alias for `Node<TypeNameData>`.
+    pub type TypeName = Node<TypeNameData>;
+    }
 
 impl TypeNameData {
     /// Return this type name as a string slice
@@ -105,7 +133,7 @@ impl fmt::Display for TypeNameData {
 }
 
 /// A path literal.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PathData {
@@ -115,8 +143,13 @@ pub enum PathData {
     Relative(String),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PathData>`.
+    pub type Path = Node<PathData>;
+}
+
 /// Type specifier (non-array).
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum TypeSpecifierNonArrayData {
@@ -583,6 +616,11 @@ pub enum TypeSpecifierNonArrayData {
     TypeName(TypeName),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<TypeSpecifierNonArrayData>`.
+    pub type TypeSpecifierNonArray = Node<TypeSpecifierNonArrayData>;
+}
+
 impl From<TypeName> for TypeSpecifierNonArrayData {
     fn from(tn: TypeName) -> Self {
         Self::TypeName(tn)
@@ -590,7 +628,7 @@ impl From<TypeName> for TypeSpecifierNonArrayData {
 }
 
 /// Type specifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct TypeSpecifierData {
@@ -598,6 +636,11 @@ pub struct TypeSpecifierData {
     pub ty: TypeSpecifierNonArray,
     /// Array part of the specifier
     pub array_specifier: Option<ArraySpecifier>,
+}
+
+impl_node_content! {
+    /// Type alias for `Node<TypeSpecifierData>`.
+    pub type TypeSpecifier = Node<TypeSpecifierData>;
 }
 
 impl From<TypeSpecifierNonArray> for TypeSpecifierData {
@@ -612,14 +655,14 @@ impl From<TypeSpecifierNonArray> for TypeSpecifierData {
 impl From<TypeSpecifierNonArrayData> for TypeSpecifierData {
     fn from(ty: TypeSpecifierNonArrayData) -> Self {
         Self {
-            ty: ty.into_node(),
+            ty: ty.into(),
             array_specifier: None,
         }
     }
 }
 
 /// Struct specifier. Used to create new, user-defined types.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct StructSpecifierData {
@@ -629,8 +672,13 @@ pub struct StructSpecifierData {
     pub fields: Vec<StructFieldSpecifier>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<StructSpecifierData>`.
+    pub type StructSpecifier = Node<StructSpecifierData>;
+}
+
 /// Struct field specifier. Used to add fields to struct specifiers.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct StructFieldSpecifierData {
@@ -642,8 +690,13 @@ pub struct StructFieldSpecifierData {
     pub identifiers: Vec<ArrayedIdentifier>, // several identifiers of the same type
 }
 
+impl_node_content! {
+    /// Type alias for `Node<StructFieldSpecifierData>`.
+    pub type StructFieldSpecifier = Node<StructFieldSpecifierData>;
+}
+
 /// An identifier with an optional array specifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct ArrayedIdentifierData {
@@ -651,6 +704,11 @@ pub struct ArrayedIdentifierData {
     pub ident: Identifier,
     /// Attached array specification
     pub array_spec: Option<ArraySpecifier>,
+}
+
+impl_node_content! {
+    /// Type alias for `Node<ArrayedIdentifierData>`.
+    pub type ArrayedIdentifier = Node<ArrayedIdentifierData>;
 }
 
 impl ArrayedIdentifierData {
@@ -677,7 +735,7 @@ impl From<&str> for ArrayedIdentifierData {
 }
 
 /// Type qualifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct TypeQualifierData {
@@ -685,8 +743,13 @@ pub struct TypeQualifierData {
     pub qualifiers: Vec<TypeQualifierSpec>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<TypeQualifierData>`.
+    pub type TypeQualifier = Node<TypeQualifierData>;
+}
+
 /// Type qualifier spec.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum TypeQualifierSpecData {
@@ -704,8 +767,13 @@ pub enum TypeQualifierSpecData {
     Precise,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<TypeQualifierSpecData>`.
+    pub type TypeQualifierSpec = Node<TypeQualifierSpecData>;
+}
+
 /// Storage qualifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum StorageQualifierData {
@@ -767,8 +835,13 @@ pub enum StorageQualifierData {
     Subroutine(Vec<TypeSpecifier>),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<StorageQualifierData>`.
+    pub type StorageQualifier = Node<StorageQualifierData>;
+}
+
 /// Layout qualifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct LayoutQualifierData {
@@ -776,8 +849,13 @@ pub struct LayoutQualifierData {
     pub ids: Vec<LayoutQualifierSpec>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<LayoutQualifierData>`.
+    pub type LayoutQualifier = Node<LayoutQualifierData>;
+}
+
 /// Layout qualifier spec.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum LayoutQualifierSpecData {
@@ -788,8 +866,13 @@ pub enum LayoutQualifierSpecData {
     Shared,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<LayoutQualifierSpecData>`.
+    pub type LayoutQualifierSpec = Node<LayoutQualifierSpecData>;
+}
+
 /// Precision qualifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PrecisionQualifierData {
@@ -804,8 +887,13 @@ pub enum PrecisionQualifierData {
     Low,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PrecisionQualifierData>`.
+    pub type PrecisionQualifier = Node<PrecisionQualifierData>;
+}
+
 /// Interpolation qualifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum InterpolationQualifierData {
@@ -820,8 +908,13 @@ pub enum InterpolationQualifierData {
     NoPerspective,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<InterpolationQualifierData>`.
+    pub type InterpolationQualifier = Node<InterpolationQualifierData>;
+}
+
 /// Fully specified type.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct FullySpecifiedTypeData {
@@ -829,6 +922,11 @@ pub struct FullySpecifiedTypeData {
     pub qualifier: Option<TypeQualifier>,
     /// Type specifier
     pub ty: TypeSpecifier,
+}
+
+impl_node_content! {
+    /// Type alias for `Node<FullySpecifiedTypeData>`.
+    pub type FullySpecifiedType = Node<FullySpecifiedTypeData>;
 }
 
 impl FullySpecifiedTypeData {
@@ -853,7 +951,7 @@ impl From<TypeSpecifierNonArrayData> for FullySpecifiedTypeData {
 }
 
 /// Dimensionality of an array.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct ArraySpecifierData {
@@ -861,8 +959,13 @@ pub struct ArraySpecifierData {
     pub dimensions: Vec<ArraySpecifierDimension>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<ArraySpecifierData>`.
+    pub type ArraySpecifier = Node<ArraySpecifierData>;
+}
+
 /// One array specifier dimension.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum ArraySpecifierDimensionData {
@@ -872,8 +975,13 @@ pub enum ArraySpecifierDimensionData {
     ExplicitlySized(Box<Expr>),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<ArraySpecifierDimensionData>`.
+    pub type ArraySpecifierDimension = Node<ArraySpecifierDimensionData>;
+}
+
 /// A declaration.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum DeclarationData {
@@ -889,9 +997,14 @@ pub enum DeclarationData {
     Invariant(Identifier),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<DeclarationData>`.
+    pub type Declaration = Node<DeclarationData>;
+}
+
 /// A general purpose block, containing fields and possibly a list of declared identifiers. Semantic
 /// is given with the storage qualifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct BlockData {
@@ -905,8 +1018,13 @@ pub struct BlockData {
     pub identifier: Option<ArrayedIdentifier>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<BlockData>`.
+    pub type Block = Node<BlockData>;
+}
+
 /// Function identifier.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum FunIdentifierData {
@@ -914,6 +1032,11 @@ pub enum FunIdentifierData {
     TypeSpecifier(Box<TypeSpecifier>),
     /// Expression used for the function name
     Expr(Box<Expr>),
+}
+
+impl_node_content! {
+    /// Type alias for `Node<FunIdentifierData>`.
+    pub type FunIdentifier = Node<FunIdentifierData>;
 }
 
 impl FunIdentifierData {
@@ -955,7 +1078,7 @@ impl FunIdentifierData {
 }
 
 /// Function prototype.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct FunctionPrototypeData {
@@ -967,8 +1090,13 @@ pub struct FunctionPrototypeData {
     pub parameters: Vec<FunctionParameterDeclaration>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<FunctionPrototypeData>`.
+    pub type FunctionPrototype = Node<FunctionPrototypeData>;
+}
+
 /// Function parameter declaration.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum FunctionParameterDeclarationData {
@@ -978,8 +1106,13 @@ pub enum FunctionParameterDeclarationData {
     Unnamed(Option<TypeQualifier>, TypeSpecifier),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<FunctionParameterDeclarationData>`.
+    pub type FunctionParameterDeclaration = Node<FunctionParameterDeclarationData>;
+}
+
 /// Function parameter declarator.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct FunctionParameterDeclaratorData {
@@ -989,8 +1122,13 @@ pub struct FunctionParameterDeclaratorData {
     pub ident: ArrayedIdentifier,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<FunctionParameterDeclaratorData>`.
+    pub type FunctionParameterDeclarator = Node<FunctionParameterDeclaratorData>;
+}
+
 /// Init declarator list.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct InitDeclaratorListData {
@@ -1000,8 +1138,13 @@ pub struct InitDeclaratorListData {
     pub tail: Vec<SingleDeclarationNoType>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<InitDeclaratorListData>`.
+    pub type InitDeclaratorList = Node<InitDeclaratorListData>;
+}
+
 /// Single declaration.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct SingleDeclarationData {
@@ -1015,8 +1158,13 @@ pub struct SingleDeclarationData {
     pub initializer: Option<Initializer>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<SingleDeclarationData>`.
+    pub type SingleDeclaration = Node<SingleDeclarationData>;
+}
+
 /// A single declaration with implicit, already-defined type.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct SingleDeclarationNoTypeData {
@@ -1026,8 +1174,13 @@ pub struct SingleDeclarationNoTypeData {
     pub initializer: Option<Initializer>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<SingleDeclarationNoTypeData>`.
+    pub type SingleDeclarationNoType = Node<SingleDeclarationNoTypeData>;
+}
+
 /// Initializer.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum InitializerData {
@@ -1035,6 +1188,11 @@ pub enum InitializerData {
     Simple(Box<Expr>),
     /// Multiple initializer
     List(Vec<Initializer>),
+}
+
+impl_node_content! {
+    /// Type alias for `Node<InitializerData>`.
+    pub type Initializer = Node<InitializerData>;
 }
 
 impl From<ExprData> for InitializerData {
@@ -1056,7 +1214,7 @@ impl From<Expr> for InitializerData {
 /// what the statement “returns”.
 ///
 /// An expression is either an assignment or a list (comma) of assignments.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum ExprData {
@@ -1093,6 +1251,11 @@ pub enum ExprData {
     PostDec(Box<Expr>),
     /// An expression that contains several, separated with comma.
     Comma(Box<Expr>, Box<Expr>),
+}
+
+impl_node_content! {
+    /// Type alias for `Node<ExprData>`.
+    pub type Expr = Node<ExprData>;
 }
 
 impl ExprData {
@@ -1141,7 +1304,7 @@ impl From<f64> for ExprData {
 }
 
 /// All unary operators that exist in GLSL.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum UnaryOpData {
@@ -1165,8 +1328,13 @@ pub enum UnaryOpData {
     Complement,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<UnaryOpData>`.
+    pub type UnaryOp = Node<UnaryOpData>;
+}
+
 /// All binary operators that exist in GLSL.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum BinaryOpData {
@@ -1229,8 +1397,13 @@ pub enum BinaryOpData {
     Mod,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<BinaryOpData>`.
+    pub type BinaryOp = Node<BinaryOpData>;
+}
+
 /// All possible operators for assigning expressions.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum AssignmentOpData {
@@ -1269,14 +1442,21 @@ pub enum AssignmentOpData {
     Or,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<AssignmentOpData>`.
+    pub type AssignmentOp = Node<AssignmentOpData>;
+}
+
 /// Starting rule.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct TranslationUnit(pub Vec<ExternalDeclaration>);
 
+impl NodeContent for TranslationUnit {}
+
 /// External declaration.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum ExternalDeclarationData {
@@ -1288,8 +1468,13 @@ pub enum ExternalDeclarationData {
     Declaration(Declaration),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<ExternalDeclarationData>`.
+    pub type ExternalDeclaration = Node<ExternalDeclarationData>;
+}
+
 /// Function definition.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct FunctionDefinitionData {
@@ -1299,13 +1484,23 @@ pub struct FunctionDefinitionData {
     pub statement: CompoundStatement,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<FunctionDefinitionData>`.
+    pub type FunctionDefinition = Node<FunctionDefinitionData>;
+}
+
 /// Compound statement (with no new scope).
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct CompoundStatementData {
     /// List of statements
     pub statement_list: Vec<Statement>,
+}
+
+impl_node_content! {
+    /// Type alias for `Node<CompoundStatementData>`.
+    pub type CompoundStatement = Node<CompoundStatementData>;
 }
 
 impl FromIterator<Statement> for CompoundStatementData {
@@ -1320,7 +1515,7 @@ impl FromIterator<Statement> for CompoundStatementData {
 }
 
 /// Statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum StatementData {
@@ -1340,6 +1535,11 @@ pub enum StatementData {
     Jump(JumpStatement),
     /// Statement block
     Compound(CompoundStatement),
+}
+
+impl_node_content! {
+    /// Type alias for `Node<StatementData>`.
+    pub type Statement = Node<StatementData>;
 }
 
 impl StatementData {
@@ -1375,13 +1575,18 @@ impl StatementData {
 }
 
 /// Expression statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct ExprStatementData(pub Option<Expr>);
 
+impl_node_content! {
+    /// Type alias for `Node<ExprStatementData>`.
+    pub type ExprStatement = Node<ExprStatementData>;
+}
+
 /// Selection statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct SelectionStatementData {
@@ -1391,8 +1596,13 @@ pub struct SelectionStatementData {
     pub rest: SelectionRestStatement,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<SelectionStatementData>`.
+    pub type SelectionStatement = Node<SelectionStatementData>;
+}
+
 /// Condition.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum ConditionData {
@@ -1402,8 +1612,13 @@ pub enum ConditionData {
     Assignment(Box<FullySpecifiedType>, Identifier, Initializer),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<ConditionData>`.
+    pub type Condition = Node<ConditionData>;
+}
+
 /// Selection rest statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum SelectionRestStatementData {
@@ -1413,8 +1628,13 @@ pub enum SelectionRestStatementData {
     Else(Box<Statement>, Box<Statement>),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<SelectionRestStatementData>`.
+    pub type SelectionRestStatement = Node<SelectionRestStatementData>;
+}
+
 /// Switch statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct SwitchStatementData {
@@ -1424,8 +1644,13 @@ pub struct SwitchStatementData {
     pub body: Vec<Statement>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<SwitchStatementData>`.
+    pub type SwitchStatement = Node<SwitchStatementData>;
+}
+
 /// Case label statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum CaseLabelData {
@@ -1435,8 +1660,13 @@ pub enum CaseLabelData {
     Def,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<CaseLabelData>`.
+    pub type CaseLabel = Node<CaseLabelData>;
+}
+
 /// Iteration statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum IterationStatementData {
@@ -1451,8 +1681,13 @@ pub enum IterationStatementData {
     For(ForInitStatement, ForRestStatement, Box<Statement>),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<IterationStatementData>`.
+    pub type IterationStatement = Node<IterationStatementData>;
+}
+
 /// For init statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum ForInitStatementData {
@@ -1462,8 +1697,13 @@ pub enum ForInitStatementData {
     Declaration(Box<Declaration>),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<ForInitStatementData>`.
+    pub type ForInitStatement = Node<ForInitStatementData>;
+}
+
 /// For init statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct ForRestStatementData {
@@ -1473,8 +1713,13 @@ pub struct ForRestStatementData {
     pub post_expr: Option<Box<Expr>>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<ForRestStatementData>`.
+    pub type ForRestStatement = Node<ForRestStatementData>;
+}
+
 /// Jump statement.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum JumpStatementData {
@@ -1492,12 +1737,17 @@ pub enum JumpStatementData {
     Discard,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<JumpStatementData>`.
+    pub type JumpStatement = Node<JumpStatementData>;
+}
+
 /// Some basic preprocessor directives.
 ///
 /// As it’s important to carry them around the AST because they cannot be substituted in a normal
 /// preprocessor (they’re used by GPU’s compilers), those preprocessor directives are available for
 /// inspection.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PreprocessorData {
@@ -1545,10 +1795,15 @@ pub enum PreprocessorData {
     Extension(PreprocessorExtension),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorData>`.
+    pub type Preprocessor = Node<PreprocessorData>;
+}
+
 /// A #define preprocessor directive.
 ///
 /// Allows any expression but only Integer and Float literals make sense
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PreprocessorDefineData {
@@ -1571,8 +1826,13 @@ pub enum PreprocessorDefineData {
     },
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorDefineData>`.
+    pub type PreprocessorDefine = Node<PreprocessorDefineData>;
+}
+
 /// An #else preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorElseIfData {
@@ -1581,8 +1841,13 @@ pub struct PreprocessorElseIfData {
     pub condition: String,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorElseIfData>`.
+    pub type PreprocessorElseIf = Node<PreprocessorElseIfData>;
+}
+
 /// An #error preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorErrorData {
@@ -1591,8 +1856,13 @@ pub struct PreprocessorErrorData {
     pub message: String,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorErrorData>`.
+    pub type PreprocessorError = Node<PreprocessorErrorData>;
+}
+
 /// An #if preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorIfData {
@@ -1601,8 +1871,13 @@ pub struct PreprocessorIfData {
     pub condition: String,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorIfData>`.
+    pub type PreprocessorIf = Node<PreprocessorIfData>;
+}
+
 /// An #ifdef preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorIfDefData {
@@ -1611,8 +1886,13 @@ pub struct PreprocessorIfDefData {
     pub ident: Identifier,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorIfDefData>`.
+    pub type PreprocessorIfDef = Node<PreprocessorIfDefData>;
+}
+
 /// A #ifndef preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorIfNDefData {
@@ -1621,8 +1901,13 @@ pub struct PreprocessorIfNDefData {
     pub ident: Identifier,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorIfNDefData>`.
+    pub type PreprocessorIfNDef = Node<PreprocessorIfNDefData>;
+}
+
 /// An #include name annotation.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorIncludeData {
@@ -1630,8 +1915,13 @@ pub struct PreprocessorIncludeData {
     pub path: Path,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorIncludeData>`.
+    pub type PreprocessorInclude = Node<PreprocessorIncludeData>;
+}
+
 /// A #line preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorLineData {
@@ -1642,9 +1932,14 @@ pub struct PreprocessorLineData {
     pub source_string_number: Option<u32>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorLineData>`.
+    pub type PreprocessorLine = Node<PreprocessorLineData>;
+}
+
 /// A #pragma preprocessor directive.
 /// Holds compiler-specific command.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorPragmaData {
@@ -1653,8 +1948,13 @@ pub struct PreprocessorPragmaData {
     pub command: String,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorPragmaData>`.
+    pub type PreprocessorPragma = Node<PreprocessorPragmaData>;
+}
+
 /// A #undef preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorUndefData {
@@ -1663,8 +1963,13 @@ pub struct PreprocessorUndefData {
     pub name: Identifier,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorUndefData>`.
+    pub type PreprocessorUndef = Node<PreprocessorUndefData>;
+}
+
 /// A #version preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorVersionData {
@@ -1675,8 +1980,13 @@ pub struct PreprocessorVersionData {
     pub profile: Option<PreprocessorVersionProfile>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorVersionData>`.
+    pub type PreprocessorVersion = Node<PreprocessorVersionData>;
+}
+
 /// A #version profile annotation.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PreprocessorVersionProfileData {
@@ -1691,8 +2001,13 @@ pub enum PreprocessorVersionProfileData {
     Es,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorVersionProfileData>`.
+    pub type PreprocessorVersionProfile = Node<PreprocessorVersionProfileData>;
+}
+
 /// An #extension preprocessor directive.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub struct PreprocessorExtensionData {
@@ -1702,8 +2017,13 @@ pub struct PreprocessorExtensionData {
     pub behavior: Option<PreprocessorExtensionBehavior>,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorExtensionData>`.
+    pub type PreprocessorExtension = Node<PreprocessorExtensionData>;
+}
+
 /// An #extension name annotation.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PreprocessorExtensionNameData {
@@ -1714,8 +2034,13 @@ pub enum PreprocessorExtensionNameData {
     Specific(SmolStr),
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorExtensionNameData>`.
+    pub type PreprocessorExtensionName = Node<PreprocessorExtensionNameData>;
+}
+
 /// An #extension behavior annotation.
-#[derive(Clone, Debug, PartialEq, NodeContent)]
+#[derive(Clone, Debug, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum PreprocessorExtensionBehaviorData {
@@ -1733,8 +2058,13 @@ pub enum PreprocessorExtensionBehaviorData {
     Disable,
 }
 
+impl_node_content! {
+    /// Type alias for `Node<PreprocessorExtensionBehaviorData>`.
+    pub type PreprocessorExtensionBehavior = Node<PreprocessorExtensionBehaviorData>;
+}
+
 /// A comment
-#[derive(Debug, Clone, PartialEq, NodeContent)]
+#[derive(Debug, Clone, PartialEq, NodeContentDisplay)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "rserde"))]
 pub enum CommentData {
@@ -1742,6 +2072,11 @@ pub enum CommentData {
     Single(String),
     /// Multi-line comment
     Multi(String),
+}
+
+impl_node_content! {
+    /// Type alias for `Node<CommentData>`.
+    pub type Comment = Node<CommentData>;
 }
 
 impl CommentData {
